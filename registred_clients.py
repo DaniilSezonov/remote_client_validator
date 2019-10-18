@@ -4,17 +4,34 @@ import logging
 logger = logging.getLogger("remote_client_validator")
 
 
+def get_client_by_uuid(uuid: str):
+    return next((client for client in _register if client.uuid == uuid), None)
+
+
+def get_client_by_host(host: str):
+    return next((client for client in _register if client.host == host), None)
+
+
+def get_default_client():
+    return _register.default
+
+
 class RegisteredClientMeta(type):
+    """
+        Метод позволяет не переопределять полность _consumer_to_template_mapping при наследовании класса
+        конфигурации, а совмещать конфигурацию родителя с дочерней конфигурацией.
+    """
     def merge_consumer_to_templates_mappings(cls):
-        return {**cls._consumer_to_templates_mapping, **cls.__bases__[0]._consumer_to_templates_mapping}
+        return {**cls.__bases__[0]._consumer_to_templates_mapping, **cls._consumer_to_templates_mapping}
 
 
 class RegisteredClient(object, metaclass=RegisteredClientMeta):
     _name: str
-    _host: str or None
-    _uuid: str
+    _host: str or None = None
+    _uuid: str or None = None
     _consumer_to_templates_mapping: dict = {}
     _default: bool = False
+
     _current_consumer: str or None = None
 
     @property
@@ -51,7 +68,7 @@ class RegisteredClient(object, metaclass=RegisteredClientMeta):
         self._current_consumer = value
 
     def __new__(cls, *args, **kwargs):
-        cls._consumer_to_templates_mapping = cls.__class__.merge_consumer_to_templates_mappings(cls)
+        cls._consumer_to_templates_mapping = cls.merge_consumer_to_templates_mappings()
         return super(RegisteredClient, cls).__new__(cls, *args, **kwargs)
 
 
@@ -73,17 +90,17 @@ class ClientRegister(object):
             self._default = item
         self._register.append(item)
 
+    def clean(self):
+        self._default = None
+        self._register = []
+
 
 _register: ClientRegister = ClientRegister()
 
 
-def get_client_by_uuid(uuid: str):
-    next((client for client in _register if client.uuid == uuid), None)
+class _OnlyForTestClient(RegisteredClient):
+    class Meta:
+        only_for_test = True
 
 
-def get_client_by_host(host: str):
-    next((client for client in _register if client.host == host), None)
 
-
-def get_default_client():
-    return _register.default

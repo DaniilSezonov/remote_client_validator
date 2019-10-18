@@ -10,12 +10,6 @@ Quick start
         'remote-client-validator',
     ]
 
-    MIDDLEWARE = (
-      ...
-      'backends.remote_client_validator.middleware.ClientValidationMiddleware',
-      ...
-    )
-
 2. Create clients configs. For example::
 
   class TestFrontend(RegisteredClient):
